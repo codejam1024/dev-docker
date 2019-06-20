@@ -1,0 +1,82 @@
+### IMAGE SETUP #########################################
+
+FROM bitnami/minideb:latest
+
+ARG PHP_VERSION=7.2
+ENV PHP_VERSION=${PHP_VERSION}
+
+ENV DEBIAN_FRONTEND noninteractive
+ENV TERM xterm
+
+RUN echo deb http://mirrors.aliyun.com/debian/ stretch main non-free contrib > /etc/apt/sources.list && \
+	echo deb http://mirrors.aliyun.com/debian-security stretch/updates main >> /etc/apt/sources.list
+
+RUN cat /etc/apt/sources.list
+
+
+# Add a non-root user to prevent files being created with root permissions on host machine.
+ARG PUID=1000
+ENV PUID ${PUID}
+ARG PGID=1000
+ENV PGID ${PGID}
+
+RUN apt-get update && apt-get --no-install-recommends --no-install-suggests -y install \
+    sudo \
+    procps \
+    curl \
+	unzip \
+    ca-certificates \
+    apt-transport-https \
+    wget && \
+    wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg && \
+    echo "deb https://packages.sury.org/php/ stretch main" > /etc/apt/sources.list.d/php.list && \
+	useradd -m docker && echo "docker:docker" | chpasswd && adduser docker sudo
+
+
+###########################################################################
+# Set Timezone
+###########################################################################
+
+ARG TZ=UTC
+ENV TZ ${TZ}
+
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+
+RUN bash -x -c "apt-get update && apt-get --no-install-recommends --no-install-suggests -y install \
+    less \
+    git \
+	vim \
+    mysql-client \
+	$PHP_VERSION-zip \
+    $PHP_VERSION-curl \
+    $PHP_VERSION-cgi \
+    $PHP_VERSION-cli \
+    $PHP_VERSION-common \
+    $PHP_VERSION-fpm \
+    $PHP_VERSION-gd \
+    $PHP_VERSION-json \
+    $PHP_VERSION-mysql \
+    $PHP_VERSION-mbstring \
+    $PHP_VERSION-xml \
+    $PHP_VERSION-xmlrpc \
+    $PHP_VERSION-mcrypt \
+    $PHP_VERSION-soap \
+    $PHP_VERSION-readline && \
+    apt-get autoremove -y && \
+    apt-get clean -y && \
+rm -rf /var/lib/apt/lists/*"
+
+ADD ./tini-static /tini
+RUN chmod +x /tini
+
+RUN curl -s https://raw.githubusercontent.com/composer/getcomposer.org/master/web/installer | php && \
+    echo "export PATH=${PATH}:~/.composer/vendor/bin" >> ~/.bashrc && \
+    mv composer.phar /usr/local/bin/composer
+
+USER docker
+
+RUN echo "export PATH=${PATH}:~/.composer/vendor/bin" >> ~/.bashrc && \
+    . ~/.bashrc
+
+ENTRYPOINT ["/tini", "--", "/bin/bash"]
