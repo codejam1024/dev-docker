@@ -60,7 +60,6 @@ RUN bash -x -c "apt-get update && apt-get --no-install-recommends --no-install-s
     $PHP_VERSION-mbstring \
     $PHP_VERSION-xml \
     $PHP_VERSION-xmlrpc \
-    $PHP_VERSION-mcrypt \
     $PHP_VERSION-soap \
     $PHP_VERSION-readline && \
     apt-get autoremove -y && \
